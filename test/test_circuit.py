@@ -28,8 +28,17 @@ class TestValidity(unittest.TestCase):
         self.assertTrue(self.test_circuit.first_rail.sides[0].direction == rail.Direction.S)
         self.assertTrue(self.test_circuit.first_rail.sides[1].direction == rail.Direction.NE)
         self.test_circuit.export()
+        
+    def nottest_simple_straight(self):
+        rails = []
+        rails.append(rail.Straight("straight"))
 
-    def test_simple_curved_reverted(self):
+        self.test_circuit = circuit.Circuit(rails[0])
+
+        self.assertTrue(self.test_circuit.valid)
+        self.test_circuit.export()        
+
+    def nottest_simple_curved_reverted(self):
         rails = []
         rails.append(rail.Curved("curved_1", reverted=True))
 
@@ -132,7 +141,7 @@ class TestValidity(unittest.TestCase):
         self.test_circuit.export()
 
 
-    def nottest_clover_circuit(self):
+    def test_clover_circuit(self):
         rails = []
         for j in range(4):
             for i in range(4):
@@ -146,15 +155,14 @@ class TestValidity(unittest.TestCase):
 
 
 
-
-        for _rail in rails:
+        for _rail in rails[:-1]:
             _next_index = (rails.index(_rail) + 1) % len(rails)
             _rail.sides[1].connect(rails[_next_index].sides[0])
 
         self.test_circuit = circuit.Circuit(rails[0])
 
         self.assertTrue(self.test_circuit.valid)
-        self.assertTrue(self.test_circuit.complete)
+        # self.assertTrue(self.test_circuit.complete)
         self.test_circuit.export()
 
 if __name__ == '__main__':

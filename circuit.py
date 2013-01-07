@@ -6,6 +6,7 @@ import rail
 import logging
 import json
 import os
+import random
 
 LOGGER = logging.getLogger()
 HANDLER = logging.NullHandler()
@@ -80,6 +81,9 @@ class Circuit(object):
         """
         Init dictionnary containing rails.
         """
+        # LOGGER.debug("_init_json:%s" % _rail.name)
+        if _rail.name in self.json_repr["rails"]:
+            _rail.name = "%s-%s" % (_rail.name, str(random.random()))
         self.json_repr["rails"].setdefault(_rail.name, {})
         self.json_repr["rails"][_rail.name].setdefault("sides", {})
         self.json_repr["rails"][_rail.name].setdefault("curved", _rail.curved)

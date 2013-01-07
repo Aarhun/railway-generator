@@ -26,7 +26,7 @@ def side_assign(new_x, new_y, new_direction, side_to_assign):
     side_to_assign.loc_x = new_x
     side_to_assign.loc_y = new_y
     side_to_assign.direction = new_direction
-    LOGGER.debug("Assigned rail %s side %d location to (%d,%d) and direction to %s" % (side_to_assign.rail.name, side_to_assign.rail.sides.index(side_to_assign), new_x, new_y, new_direction))
+    # LOGGER.debug("Assigned rail %s side %d location to (%d,%d) and direction to %s" % (side_to_assign.rail.name, side_to_assign.rail.sides.index(side_to_assign), new_x, new_y, new_direction))
 
 class Direction(object):
     """
@@ -83,7 +83,7 @@ class Rail(object):
             self.sides.append(Side(self))
             self.sides.append(Side(self, Side.MALE))
 
-        LOGGER.debug("Created rail %s" % self.name)
+        # LOGGER.debug("Created rail %s" % self.name)
 
 
     def update_sides(self):
@@ -148,7 +148,7 @@ class Straight(Rail):
         _side_to_assign = self.sides[_next_index]
         #_reverted = False
 
-        LOGGER.debug("Calculate rail %s side %d location and direction." % (side.rail.name, _next_index))
+        # LOGGER.debug("Calculate rail %s side %d location and direction." % (side.rail.name, _next_index))
 
         #if side.rail.sides.index(side) == 1:
             #_reverted = True:
@@ -227,9 +227,9 @@ class Curved(Rail):
         _side_to_assign = self.sides[_next_index]
         _reverted = self.reverted
 
-        LOGGER.debug("Rail %s" % side.rail.name)
-        LOGGER.debug("Side %d defined to (%d,%d)/%s" % (side.rail.sides.index(side), side.loc_x, side.loc_y, side.direction))
-        LOGGER.debug("Calculate side %d location and direction." % (_next_index))
+        # LOGGER.debug("Rail %s" % side.rail.name)
+        # LOGGER.debug("Side %d defined to (%d,%d)/%s" % (side.rail.sides.index(side), side.loc_x, side.loc_y, side.direction))
+        # LOGGER.debug("Calculate side %d location and direction." % (_next_index))
         if side.rail.sides.index(side) == 1:
             _reverted = not self.reverted
 
@@ -311,7 +311,7 @@ class Side(object):
         if self.rail != side.rail:
             if side.connector_type != self.connector_type:
                 if side.connected_to is None:
-                    LOGGER.debug("Connected side %d of rail %s to side %d of rail %s" % (self.rail.sides.index(self), self.rail.name, side.rail.sides.index(side), side.rail.name))
+                    # LOGGER.debug("Connected side %d of rail %s to side %d of rail %s" % (self.rail.sides.index(self), self.rail.name, side.rail.sides.index(side), side.rail.name))
                     self.connected_to = side
                     side.connected_to = self
                     side.loc_x = self.loc_x
