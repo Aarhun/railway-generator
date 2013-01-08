@@ -1,7 +1,7 @@
 
 window.onload = windowReady;
 
-function drawCurved(context, x1, y1, x2, y2, direction1, direction2, lineWidth, scale)
+function drawCurved(context, x1, y1, x2, y2, direction1, direction2, radius, lineWidth, scale, color)
 {
     var centerX;
     var centerY;
@@ -9,7 +9,6 @@ function drawCurved(context, x1, y1, x2, y2, direction1, direction2, lineWidth, 
     var endingAngle;
     var counterclockwise = false;
     // Value fixed by vario-system:
-    var radius = 205;
     // console.log(x1 + " " + y1);
     // console.log(x2 + " " + y2);
     // console.log(direction1);
@@ -180,14 +179,14 @@ function drawCurved(context, x1, y1, x2, y2, direction1, direction2, lineWidth, 
     context.arc(centerX, -centerY, radius, startingAngle, endingAngle, counterclockwise);
 
 
-    
+
     context.lineWidth = lineWidth;
-    context.strokeStyle = 'green';
+    context.strokeStyle = color;
 
     context.stroke();
 
     context.closePath();
-    
+
     // Draw center:
     // context.fillRect(centerX,centerY,4,4);
     // console.log("fill rect: " + centerX + " " + centerY)
@@ -296,7 +295,7 @@ function windowReady()
 
 
 
-    
+
     var max_x = railway["max_x"];
     var max_y = railway["max_y"];
     var min_x = railway["min_x"];
@@ -306,12 +305,12 @@ function windowReady()
 
     var lineWidth = 60 * scale;
     var shift_x = 60 * scale + lineWidth * 2;
-    var shift_y = 60 * scale + lineWidth * 2;    
+    var shift_y = 60 * scale + lineWidth * 2;
     var context = document.getElementById("canvasId").getContext("2d");
     var width = (max_x - min_x + shift_x * 2);
     var height = (max_y - min_y + shift_y * 2);
     // var width = 500;
-    // var height = 500;    
+    // var height = 500;
     var first_point;
     var curved;
     var reverted;
@@ -323,6 +322,7 @@ function windowReady()
     var second_point_direction;
     var second_point_x;
     var second_point_y;
+    var radius;
     var count = 0;
 
 
@@ -376,6 +376,8 @@ function windowReady()
         // context.beginPath();
         curved = railway["rails"][rail]["curved"];
         reverted = railway["rails"][rail]["reverted"];
+        radius = railway["rails"][rail]["radius"];
+        color = railway["rails"][rail]["color"];
         // console.log(curved);
         // console.log(reverted);
         for (side in railway["rails"][rail]["sides"])
@@ -395,8 +397,8 @@ function windowReady()
                     second_point_direction = railway["rails"][rail]["sides"][side]["direction"];
                     second_point_x = railway["rails"][rail]["sides"][side]["x"];
                     second_point_y = railway["rails"][rail]["sides"][side]["y"];
-                    
-                    drawCurved(context, first_point_x, first_point_y, second_point_x, second_point_y, first_point_direction, second_point_direction, lineWidth, scale)
+
+                    drawCurved(context, first_point_x, first_point_y, second_point_x, second_point_y, first_point_direction, second_point_direction, radius, lineWidth, scale, color)
                 }
             }
             else
@@ -417,7 +419,7 @@ function windowReady()
                     context.moveTo(first_point_x,-first_point_y);
                     context.lineTo(second_point_x, -second_point_y);
                     context.lineWidth = lineWidth;
-                    context.strokeStyle = 'purple';
+                    context.strokeStyle = color;
                     context.stroke();
                     context.closePath();
                 }

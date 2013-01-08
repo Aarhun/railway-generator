@@ -2,6 +2,7 @@
 Module to define a rail.
 """
 import logging
+import math
 
 LOGGER = logging.getLogger()
 HANDLER = logging.NullHandler()
@@ -47,7 +48,7 @@ class Rail(object):
     """
 
 
-    def __init__(self, name, length, width=40, heigth=12, angle=0, sides=None, curved=False, reverted=False):
+    def __init__(self, name, length, width=40, heigth=12, sides=None, curved=False, reverted=False, color="#3cb371"):
         """
         Initialize a rail.
 
@@ -70,11 +71,11 @@ class Rail(object):
         self.length = length
         self.width = width
         self.heigth = heigth
-        self.angle = angle
         self.reverted = reverted
         self.sides = []
         self.name = name
         self.curved = curved
+        self.color = color
 
         if sides:
             self.sides = sides[:]
@@ -133,92 +134,53 @@ class Rail(object):
 
 
 
-class Straight(Rail):
+class StraightType(Rail):
     """
-    Common straight rail.
+    Straight rail template.
     """
-
-    def __init__(self, name):
-        super(Straight, self).__init__(name, length=150)
-
-
     def _side_calc(self, side):
 
         _next_index = (self.sides.index(side) + 1) % len(self.sides)
         _side_to_assign = self.sides[_next_index]
-        #_reverted = False
+        _square_side = int(round(math.cos(math.radians(45)) * self.length))
+        LOGGER.debug(_square_side)
 
-        # LOGGER.debug("Calculate rail %s side %d location and direction." % (side.rail.name, _next_index))
-
-        #if side.rail.sides.index(side) == 1:
-            #_reverted = True:
-
-        #if _reverted:
-            #if side.direction == Direction.N:
-                #side_assign(side.loc_x, side.loc_y - self.length, Direction.S, _side_to_assign)
-
-            #elif side.direction == Direction.NE:
-                #side_assign(side.loc_x - 106, side.loc_y - 106, Direction.SO, _side_to_assign)
-
-            #elif side.direction == Direction.E:
-                #side_assign(side.loc_x - self.length, side.loc_y, Direction.O, _side_to_assign)
-
-            #elif side.direction == Direction.SE:
-                #side_assign(side.loc_x - 106, side.loc_y + 106, Direction.NO, _side_to_assign)
-
-            #elif side.direction == Direction.S:
-                #side_assign(side.loc_x, side.loc_y + self.length, Direction.N, _side_to_assign)
-
-            #elif side.direction == Direction.SO:
-                #side_assign(side.loc_x + 106, side.loc_y + 106, Direction.NE, _side_to_assign)
-
-            #elif side.direction == Direction.O:
-                #side_assign(side.loc_x + self.length, side.loc_y, Direction.E, _side_to_assign)
-
-            #elif side.direction == Direction.NO:
-                #side_assign(side.loc_x + 106, side.loc_y - 106, Direction.SE, _side_to_assign)
-        #else:
         if side.direction == Direction.N:
             side_assign(side.loc_x, side.loc_y - self.length, Direction.S, _side_to_assign)
 
         elif side.direction == Direction.NE:
-            side_assign(side.loc_x - 106, side.loc_y - 106, Direction.SO, _side_to_assign)
+            side_assign(side.loc_x - _square_side, side.loc_y - _square_side, Direction.SO, _side_to_assign)
 
         elif side.direction == Direction.E:
             side_assign(side.loc_x - self.length, side.loc_y, Direction.O, _side_to_assign)
 
         elif side.direction == Direction.SE:
-            side_assign(side.loc_x - 106, side.loc_y + 106, Direction.NO, _side_to_assign)
+            side_assign(side.loc_x - _square_side, side.loc_y + _square_side, Direction.NO, _side_to_assign)
 
         elif side.direction == Direction.S:
             side_assign(side.loc_x, side.loc_y + self.length, Direction.N, _side_to_assign)
 
         elif side.direction == Direction.SO:
-            side_assign(side.loc_x + 106, side.loc_y + 106, Direction.NE, _side_to_assign)
+            side_assign(side.loc_x + _square_side, side.loc_y + _square_side, Direction.NE, _side_to_assign)
 
         elif side.direction == Direction.O:
             side_assign(side.loc_x + self.length, side.loc_y, Direction.E, _side_to_assign)
 
         elif side.direction == Direction.NO:
-            side_assign(side.loc_x + 106, side.loc_y - 106, Direction.SE, _side_to_assign)
+            side_assign(side.loc_x + _square_side, side.loc_y - _square_side, Direction.SE, _side_to_assign)
 
 
-class Curved(Rail):
+
+class CurvedType(Rail):
     """
-    Common curved rail.
-
-    Circle formed by vario-sytem wooden rail has a diameter of about 45cm (external).
-    With a width of 4cm, the internal circle diameter is about 37cm.
-    In case of curved piece, the length is calculate like this:
-
-    l = ((pi * external_diameter * angle / 360) + (pi * internal_diameter * angle / 360)) / 2
-
-    Here:
-    (17,7 + 14,5) / 2 = 16,1
+    Curved rail template
     """
 
-    def __init__(self, name, reverted=False):
-        super(Curved, self).__init__(name, length=161, angle=45, curved=True, reverted=reverted)
+    def __init__(self, radius, angle=45, **other_args):
+        self.radius = radius
+        self.angle = angle
+        self.length = int(round((math.pi * self.radius * 2 * self.angle) / 360))
+        super(CurvedType, self).__init__(length=self.length, curved=True, **other_args)
 
 
     def _side_calc(self, side):
@@ -226,6 +188,10 @@ class Curved(Rail):
         _next_index = (self.sides.index(side) + 1) % len(self.sides)
         _side_to_assign = self.sides[_next_index]
         _reverted = self.reverted
+        _big = int(round(math.cos(math.radians(self.angle)) * self.radius))
+        _little = self.radius - _big
+        LOGGER.debug(_big)
+        LOGGER.debug(_little)
 
         # LOGGER.debug("Rail %s" % side.rail.name)
         # LOGGER.debug("Side %d defined to (%d,%d)/%s" % (side.rail.sides.index(side), side.loc_x, side.loc_y, side.direction))
@@ -235,52 +201,52 @@ class Curved(Rail):
 
         if _reverted:
             if side.direction == Direction.N:
-                side_assign(side.loc_x + 60, side.loc_y - 145, Direction.SE, _side_to_assign)
+                side_assign(side.loc_x + _little, side.loc_y - _big, Direction.SE, _side_to_assign)
 
             elif side.direction == Direction.NE:
-                side_assign(side.loc_x - 60, side.loc_y - 145, Direction.S, _side_to_assign)
+                side_assign(side.loc_x - _little, side.loc_y - _big, Direction.S, _side_to_assign)
 
             elif side.direction == Direction.E:
-                side_assign(side.loc_x - 145, side.loc_y - 60, Direction.SO, _side_to_assign)
+                side_assign(side.loc_x - _big, side.loc_y - _little, Direction.SO, _side_to_assign)
 
             elif side.direction == Direction.SE:
-                side_assign(side.loc_x - 145, side.loc_y + 60, Direction.O, _side_to_assign)
+                side_assign(side.loc_x - _big, side.loc_y + _little, Direction.O, _side_to_assign)
 
             elif side.direction == Direction.S:
-                side_assign(side.loc_x - 60, side.loc_y + 145, Direction.NO, _side_to_assign)
+                side_assign(side.loc_x - _little, side.loc_y + _big, Direction.NO, _side_to_assign)
 
             elif side.direction == Direction.SO:
-                side_assign(side.loc_x + 60, side.loc_y + 145, Direction.N, _side_to_assign)
+                side_assign(side.loc_x + _little, side.loc_y + _big, Direction.N, _side_to_assign)
 
             elif side.direction == Direction.O:
-                side_assign(side.loc_x + 145, side.loc_y + 60, Direction.NE, _side_to_assign)
+                side_assign(side.loc_x + _big, side.loc_y + _little, Direction.NE, _side_to_assign)
 
             elif side.direction == Direction.NO:
-                side_assign(side.loc_x + 145, side.loc_y - 60, Direction.E, _side_to_assign)
+                side_assign(side.loc_x + _big, side.loc_y - _little, Direction.E, _side_to_assign)
         else:
             if side.direction == Direction.N:
-                side_assign(side.loc_x - 60, side.loc_y - 145, Direction.SO, _side_to_assign)
+                side_assign(side.loc_x - _little, side.loc_y - _big, Direction.SO, _side_to_assign)
 
             elif side.direction == Direction.NE:
-                side_assign(side.loc_x - 145, side.loc_y - 60, Direction.O, _side_to_assign)
+                side_assign(side.loc_x - _big, side.loc_y - _little, Direction.O, _side_to_assign)
 
             elif side.direction == Direction.E:
-                side_assign(side.loc_x - 145, side.loc_y + 60, Direction.NO, _side_to_assign)
+                side_assign(side.loc_x - _big, side.loc_y + _little, Direction.NO, _side_to_assign)
 
             elif side.direction == Direction.SE:
-                side_assign(side.loc_x - 60, side.loc_y + 145, Direction.N, _side_to_assign)
+                side_assign(side.loc_x - _little, side.loc_y + _big, Direction.N, _side_to_assign)
 
             elif side.direction == Direction.S:
-                side_assign(side.loc_x + 60, side.loc_y + 145, Direction.NE, _side_to_assign)
+                side_assign(side.loc_x + _little, side.loc_y + _big, Direction.NE, _side_to_assign)
 
             elif side.direction == Direction.SO:
-                side_assign(side.loc_x + 145, side.loc_y + 60, Direction.E, _side_to_assign)
+                side_assign(side.loc_x + _big, side.loc_y + _little, Direction.E, _side_to_assign)
 
             elif side.direction == Direction.O:
-                side_assign(side.loc_x + 145, side.loc_y - 60, Direction.SE, _side_to_assign)
+                side_assign(side.loc_x + _big, side.loc_y - _little, Direction.SE, _side_to_assign)
 
             elif side.direction == Direction.NO:
-                side_assign(side.loc_x + 60, side.loc_y - 145, Direction.S, _side_to_assign)
+                side_assign(side.loc_x + _little, side.loc_y - _big, Direction.S, _side_to_assign)
 
 
 
@@ -332,8 +298,37 @@ class Side(object):
             return True
 
 
+class LittleCurved(CurvedType):
+    def __init__(self, name, reverted=False):
+        super(LittleCurved, self).__init__(radius=100, name=name, reverted=reverted, color="#daa520")
 
+class CommonCurved(CurvedType):
+    """
+    Common curved rail.
 
+    Circle formed by vario-sytem wooden rail has a diameter of about 45cm (external).
+    With a width of 4cm, the internal circle diameter is about 37cm.
+    In case of curved piece, the length is calculate like this:
 
+    l = ((pi * external_diameter * angle / 360) + (pi * internal_diameter * angle / 360)) / 2
 
+    Here:
+    (17,7 + 14,5) / 2 = 16,1
+    """
+    def __init__(self, name, reverted=False):
+        super(CommonCurved, self).__init__(radius=205, name=name, reverted=reverted)
+
+class LittleStraight(StraightType):
+    """
+    Little straight rail.
+    """
+    def __init__(self, name):
+        super(LittleStraight, self).__init__(name, length=75, color="#b22222")
+
+class CommonStraight(StraightType):
+    """
+    Common straight rail.
+    """
+    def __init__(self, name):
+        super(CommonStraight, self).__init__(name, length=150, color="#7b68ee")
 

@@ -88,6 +88,9 @@ class Circuit(object):
         self.json_repr["rails"][_rail.name].setdefault("sides", {})
         self.json_repr["rails"][_rail.name].setdefault("curved", _rail.curved)
         self.json_repr["rails"][_rail.name].setdefault("reverted", _rail.reverted)
+        self.json_repr["rails"][_rail.name].setdefault("color", _rail.color)
+        if _rail.curved:
+            self.json_repr["rails"][_rail.name].setdefault("radius", _rail.radius)
         for side in _rail.sides:
             self.json_repr["rails"][_rail.name]["sides"].setdefault(_rail.sides.index(side), {})
             self.json_repr["rails"][_rail.name]["sides"][_rail.sides.index(side)].setdefault("x", side.loc_x)
