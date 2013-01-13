@@ -12,8 +12,88 @@ LOGGER = logging.getLogger()
 HANDLER = logging.NullHandler()
 LOGGER.addHandler(HANDLER)
 
+class SearchCircuit(object):
+    """
+    Search for circuits
+    """
+    def __init__(self, rails):
+        self.rails = rails[:]
+        self.uncomplete_circuit = []
+        self.good_circuit = []
+        self.not_valid_circuit = []
+        
+    def _recursive_add(self, test_circuit):
 
+        _test_circuit = test_circuit[:]
+        _not_used_rails = list(set(self.rails) - set(_test_circuit))
+        
+        if len(_not_used_rails):
+            random.shuffle(_not_used_rails)
+            # _next_rail = _not_used_rails[random.randrange(0, len(_not_used_rails))]
+            for _next_rail in _not_used_rails:
+                LOGGER.debug("Following %s" % _next_rail.name)
+                _test_circuit[-1].sides[1].connect(_next_rail.sides[0])
+                _test_circuit.append(_next_rail)
 
+                if _test_circuit in self.not_valid_circuit:
+                    return False
+                    
+                if _test_circuit in self.uncomplete_circuit:
+                    return False                
+                    
+                if _test_circuit in self.good_circuit:
+                    return True
+                
+                _circuit = Circuit(_test_circuit[0])
+                
+                if not _circuit.valid:
+                    self.not_valid_circuit.append(_test_circuit)
+                    LOGGER.info("Circuit is not valid.")
+                    return False
+                    
+                if not _circuit.complete:
+                    self.uncomplete_circuit.append(_test_circuit)
+                    LOGGER.info("Circuit is not complete.")
+                    return self._recursive_add(_test_circuit)
+                else:
+                    self.good_circuit.append(_test_circuit)
+                    return True
+                break
+                
+        else:
+            LOGGER.info("No more rails to add.")
+            return False
+        
+        
+        
+        
+    def search(self):
+        _already_first = []
+        _not_already_first = list(set(self.rails) - set(_already_first))
+        
+        while len(_not_already_first):
+            _rail = _not_already_first[random.randrange(0, len(_not_already_first))]
+            _already_first.append(_rail)
+        
+        
+            LOGGER.debug("Start with rail %s" % _rail.name)
+            _test_circuit = []
+            _test_circuit.append(_rail)
+                
+            _test = self._recursive_add(_test_circuit)
+                
+            
+           
+            if len(self.good_circuit):
+                break
+                
+            _not_already_first = list(set(self.rails) - set(_already_first))
+            
+        else:
+            LOGGER.debug("END without found one :(")
+            for elt in self.not_valid_circuit:
+                LOGGER.debug(str(elt))
+    
 class Circuit(object):
     """
     Define a circuit.
@@ -26,13 +106,15 @@ class Circuit(object):
         To construct the circuit we just need to follow the chain.
         """
         self.first_rail = first_rail
+        self.rails = []
         self.complete = True
         self.valid = True
         self.length = 0
-        self.max_x = 0
-        self.min_x = 0
-        self.max_y = 0
-        self.min_y = 0
+        self.max_x = None
+        self.min_x = None
+        self.max_y = None
+        self.min_y = None
+        self.sides_not_connected = []
         self.rails_number = 0
         self.first_rail.sides[0].loc_x = 0
         self.first_rail.sides[0].loc_y = 0
@@ -40,15 +122,50 @@ class Circuit(object):
         self.json_repr = {}
         self.json_repr.setdefault("rails", {})
         self._walk_circuit(self.first_rail,
-                           funcs=[self._init_length, self._init_sides, self._init_json])
+                           funcs=[self._init_length, self._init_sides, self._is_overlapping, self._init_json, self._init_min_max])
 
+        self._try_to_complete_circuit()
         self._convertLocation()
 
         self.json_repr.setdefault("max_x", self.max_x)
         self.json_repr.setdefault("max_y", self.max_y)
         self.json_repr.setdefault("min_x", self.min_x)
         self.json_repr.setdefault("min_y", self.min_y)
+        self.rails_number = len(self.rails)
+        
+        
         LOGGER.debug("Created a circuit of %d rails for a length of %dmm." % (self.rails_number, self.length))
+        
+    def __str__(self):
+        return "<->".join([elt.name for elt in self.rails])
+        
+        
+        
+    def _try_to_complete_circuit(self):
+        """
+        Try to complete the circuit by connecting two rails sides if they are at the same location.
+        """
+        while len(self.sides_not_connected):
+            _side = self.sides_not_connected.pop(0)
+            for _side_bis in self.sides_not_connected:
+                if _side.loc_x == _side_bis.loc_x and _side.loc_y == _side_bis.loc_y:
+                    _side.connect(_side_bis)
+                    self.sides_not_connected.remove(_side_bis)
+                    LOGGER.debug("Found sides in the same place, not connected, connected them. (rails %s and %s)" % (_side.rail.name, _side_bis.rail.name))
+                    break
+            else:
+                break
+        # If there is no more sides 'alone', circuit is complete:
+        if not len(self.sides_not_connected):
+            self.complete = True
+    
+    def _is_overlapping(self, _rail):
+        for elt in self.rails:
+            if elt.is_overlapping(_rail):
+                self.valid = False
+                LOGGER.error("Two rails (%s and %s) are overlapping !" % (_rail.name, elt.name))
+                LOGGER.error("Circuit is not valid.")
+                
 
     def _convertLocation(self):
         """
@@ -67,6 +184,10 @@ class Circuit(object):
 
         if delta_x or delta_y:
             for key, value in self.json_repr["rails"].items():
+                self.json_repr["rails"][key]["min_x"] += delta_x
+                self.json_repr["rails"][key]["max_x"] += delta_x
+                self.json_repr["rails"][key]["min_y"] += delta_y
+                self.json_repr["rails"][key]["max_y"] += delta_y
                 for key_2, value_2 in value["sides"].items():
                     value_2["x"] += delta_x
                     value_2["y"] += delta_y
@@ -76,34 +197,43 @@ class Circuit(object):
         _file.write("var railway = ")
         _file.write(json.dumps(self.json_repr))
         _file.close()
-
+        
+    def _init_min_max(self, _rail):
+        if self.min_x is None or _rail.min_x < self.min_x:
+            self.min_x = _rail.min_x
+        if self.min_y is None or _rail.min_y < self.min_y:
+            self.min_y = _rail.min_y
+        if self.max_x is None or _rail.max_x > self.max_x:
+            self.max_x = _rail.max_x
+        if self.max_y is None or _rail.max_y > self.max_y:
+            self.max_y = _rail.max_y   
+            
     def _init_json(self, _rail):
         """
         Init dictionnary containing rails.
         """
         # LOGGER.debug("_init_json:%s" % _rail.name)
-        if _rail.name in self.json_repr["rails"]:
-            _rail.name = "%s-%s" % (_rail.name, str(random.random()))
+
         self.json_repr["rails"].setdefault(_rail.name, {})
         self.json_repr["rails"][_rail.name].setdefault("sides", {})
         self.json_repr["rails"][_rail.name].setdefault("curved", _rail.curved)
         self.json_repr["rails"][_rail.name].setdefault("reverted", _rail.reverted)
         self.json_repr["rails"][_rail.name].setdefault("color", _rail.color)
+        self.json_repr["rails"][_rail.name].setdefault("width", _rail.width)
+        self.json_repr["rails"][_rail.name].setdefault("min_x", _rail.min_x)
+        self.json_repr["rails"][_rail.name].setdefault("min_y", _rail.min_y)
+        self.json_repr["rails"][_rail.name].setdefault("max_x", _rail.max_x)
+        self.json_repr["rails"][_rail.name].setdefault("max_y", _rail.max_y)
         if _rail.curved:
             self.json_repr["rails"][_rail.name].setdefault("radius", _rail.radius)
+            
         for side in _rail.sides:
             self.json_repr["rails"][_rail.name]["sides"].setdefault(_rail.sides.index(side), {})
             self.json_repr["rails"][_rail.name]["sides"][_rail.sides.index(side)].setdefault("x", side.loc_x)
             self.json_repr["rails"][_rail.name]["sides"][_rail.sides.index(side)].setdefault("y", side.loc_y)
             self.json_repr["rails"][_rail.name]["sides"][_rail.sides.index(side)].setdefault("direction", side.direction)
-            if side.loc_x < self.min_x:
-                self.min_x = side.loc_x
-            if side.loc_y < self.min_y:
-                self.min_y = side.loc_y
-            if side.loc_x > self.max_x:
-                self.max_x = side.loc_x
-            if side.loc_y > self.max_y:
-                self.max_y = side.loc_y
+                
+
 
 
     def _init_sides(self, _rail):
@@ -113,12 +243,17 @@ class Circuit(object):
         """
         try:
             _rail.update_sides()
+        except AssertionError, error:
+            self.valid = False
+            LOGGER.error(error)
+            LOGGER.error("Circuit is not valid.")
+            
+        try:
             _rail.update_connected_sides()
         except AssertionError, error:
             self.valid = False
             LOGGER.error(error)
             LOGGER.error("Circuit is not valid.")
-
 
     def is_valid(self):
         """
@@ -142,11 +277,6 @@ class Circuit(object):
         """
         return self.valid
 
-    def _is_overlaping(self, _rail):
-        """
-        TODO: to implement
-        """
-        pass
 
     def _init_length(self, _rail):
         """
@@ -157,35 +287,40 @@ class Circuit(object):
 
 
 
-    def _walk_circuit(self, _rail, already_walked=None, funcs=None):
+    def _walk_circuit(self, _rail, funcs=None):
         """
         Walk through all the circuit.
         """
-        if already_walked and _rail in already_walked:
+        if _rail in self.rails:
             return
 
-        LOGGER.info("Walk through rail %s" % _rail.name)
+        # LOGGER.info("Walk through rail %s" % _rail.name)
 
-        self.rails_number = self.rails_number + 1
-
-
-        if not already_walked:
-            already_walked = []
-        already_walked.append(_rail)
-
+        if _rail.name in [elt.name for elt in self.rails]:
+            _rail.name = "%s%s" % (_rail.name, str(random.randrange(0, 10000)))
+        
         if funcs:
             for func in funcs:
-                func(_rail)
+                try:
+                    func(_rail)
+                except Exception, error:
+                    LOGGER.error(error)
+                    break
+        
 
-
+        
+        self.rails.append(_rail)
+        
+            
 
         for side in _rail.sides:
             if not side.is_connected():
                 self.complete = False
+                self.sides_not_connected.append(side)
             else:
-                self._walk_circuit(side.connected_to.rail,
-                                   already_walked, funcs)
-
+                self._walk_circuit(side.connected_to.rail, funcs)
+        
+        
 
 
 

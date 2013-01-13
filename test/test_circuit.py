@@ -51,7 +51,7 @@ class TestValidity(unittest.TestCase):
         rails = []
         for i in range(8):
             rails.append(rail.CommonCurved("curved_%d" % i))
-        for _rail in rails:
+        for _rail in rails[:-1]:
             _next_index = (rails.index(_rail) + 1) % len(rails)
             _rail.sides[1].connect(rails[_next_index].sides[0])
 
@@ -88,7 +88,6 @@ class TestValidity(unittest.TestCase):
         self.assertFalse(self.test_circuit.valid)
 
     def nottest_double_simple_loop(self):
-        # Should fail if space management is implemented.
         rails = []
         for i in range(16):
             rails.append(rail.CommonCurved("curved_%d" % i))
@@ -98,7 +97,8 @@ class TestValidity(unittest.TestCase):
 
         self.test_circuit = circuit.Circuit(rails[0])
 
-        self.assertTrue(self.test_circuit.valid)
+        self.test_circuit.export()
+        self.assertTrue(not self.test_circuit.valid)
 
 
     def nottest_loop_with_two_straight(self):
@@ -121,7 +121,7 @@ class TestValidity(unittest.TestCase):
 
         self.assertTrue(self.test_circuit.valid)
         self.assertTrue(self.test_circuit.complete)
-        self.test_circuit.export()
+        
 
 
     def nottest_only_straight(self):
@@ -164,6 +164,44 @@ class TestValidity(unittest.TestCase):
         self.assertTrue(self.test_circuit.valid)
         self.assertTrue(self.test_circuit.complete)
         self.test_circuit.export()
+        
+    def nottest_cross_circuit(self):
+        rails = []
+        
+        for k in range(2):
+            for j in range(2):
+                for i in range(6):
+                    rails.append(rail.LittleCurved("curved"))
+                for i in range(2):
+                    rails.append(rail.CommonStraight("straight"))
+                for i in range(2):
+                    rails.append(rail.CommonCurved("c"))
+                for i in range(2):
+                    rails.append(rail.CommonStraight("straight"))
+
+            for i in range(3):
+                rails.append(rail.CommonStraight("straight"))                   
+            for i in range(6):
+                rails.append(rail.LittleCurved("curved", reverted=True))
+            for i in range(5):
+                rails.append(rail.CommonStraight("straight"))
+            for i in range(2):
+                rails.append(rail.CommonCurved("c"))
+            for i in range(2):
+                rails.append(rail.CommonStraight("straight"))   
+            
+                
+        for _rail in rails:
+            _next_index = (rails.index(_rail) + 1) % len(rails)
+            _rail.sides[1].connect(rails[_next_index].sides[0])
+
+        
+        self.test_circuit = circuit.Circuit(rails[0])
+
+        self.test_circuit.export()   
+        self.assertTrue(not self.test_circuit.valid)
+        self.assertTrue(self.test_circuit.complete)
+             
 
     def test_O_O_circuit(self):
         rails = []
@@ -175,11 +213,11 @@ class TestValidity(unittest.TestCase):
             for i in range(2):
                 rails.append(rail.LittleCurved("littlecurved", reverted=True))
 
-            for i in range(2):
-                rails.append(rail.CommonStraight("straight"))
+            # for i in range(2):
+                # rails.append(rail.CommonStraight("straight"))
 
-            for i in range(2):
-                rails.append(rail.LittleStraight("straight"))
+            # for i in range(2):
+                # rails.append(rail.LittleStraight("straight"))
 
             #for i in range(6):
                 #rails.append(rail.CommonCurved("curved"))
@@ -205,6 +243,16 @@ class TestValidity(unittest.TestCase):
         self.assertTrue(self.test_circuit.valid)
         #self.assertTrue(self.test_circuit.complete)
         self.test_circuit.export()
+        LOGGER.debug(self.test_circuit)
+        
+    def nottest_search_circuit_simple_loop(self):
+        rails = []
+        for i in range(8):
+            rails.append(rail.CommonCurved("curved%d" % i))
+        for i in range(2):
+            rails.append(rail.CommonStraight("straight%d" % i))            
+        search_circuit = circuit.SearchCircuit(rails)
+        search_circuit.search()
 
 if __name__ == '__main__':
     unittest.main()

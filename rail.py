@@ -76,6 +76,10 @@ class Rail(object):
         self.name = name
         self.curved = curved
         self.color = color
+        self.min_x = None
+        self.max_x = None
+        self.min_y = None
+        self.max_y = None
 
         if sides:
             self.sides = sides[:]
@@ -86,7 +90,31 @@ class Rail(object):
 
         # LOGGER.debug("Created rail %s" % self.name)
 
+        
+    def is_overlapping(self, _rail):
+        """
+        Check if two rails part are overlapping.
+        """
 
+        if self.is_located() and _rail.is_located():
+            if (self.min_x < _rail.max_x and self.max_x > _rail.min_x and self.min_y < _rail.max_y and self.max_y > _rail.min_y):
+                for _side in self.sides:
+                    if _side.is_connected() and _side.connected_to.rail == _rail:
+                        # LOGGER.debug("Rail %s and rail %s are connected, assuming they are not overlapping." % (self.name, _rail.name))
+                        return False
+                else:
+                    return True
+
+        else:
+            raise AssertionError("Rails must be located in order to check if they overlapps each other.")
+            
+
+    def is_located(self):
+        """
+        Simply check if rail location has been defined.
+        """
+        return not (self.min_x is None or self.max_x is None or self.min_y is None or self.max_y is None)
+        
     def update_sides(self):
         """
         Update other sides position (x,y) and direction.
@@ -126,10 +154,9 @@ class Rail(object):
                     side.connected_to.loc_y = side.loc_y
 
                 opposite_direction = (side.direction + 4) % 8
-                if side.connected_to.direction is not None and side.connected_to.direction != opposite_direction:
-                    raise AssertionError("Rail are connected but sides involved are not in the right direction.")
-                else:
-                    side.connected_to.direction = opposite_direction
+                # if side.connected_to.direction is not None and side.connected_to.direction != opposite_direction:
+                    # LOGGER.warning("Rail are connected but sides involved are not in the right direction. %d <> %d" % (side.connected_to.direction, opposite_direction))
+                side.connected_to.direction = opposite_direction
 
 
 
@@ -139,37 +166,75 @@ class StraightType(Rail):
     Straight rail template.
     """
     def _side_calc(self, side):
+        """
+        Calculate side location from the other.
+        Calculate the min_x/max and min_y/max of rail.
+        """
 
         _next_index = (self.sides.index(side) + 1) % len(self.sides)
         _side_to_assign = self.sides[_next_index]
         _square_side = int(round(math.cos(math.radians(45)) * self.length))
-        LOGGER.debug(_square_side)
+        _square_side_width = int(round(math.cos(math.radians(45)) * (self.width / 2)))
+        # LOGGER.debug(_square_side)
+
 
         if side.direction == Direction.N:
             side_assign(side.loc_x, side.loc_y - self.length, Direction.S, _side_to_assign)
+            self.min_x = side.loc_x - (self.width / 2)
+            self.max_x = side.loc_x + (self.width / 2)
+            self.min_y = side.loc_y - self.length
+            self.max_y = side.loc_y
 
         elif side.direction == Direction.NE:
             side_assign(side.loc_x - _square_side, side.loc_y - _square_side, Direction.SO, _side_to_assign)
+            self.min_x = side.loc_x - _square_side_width - _square_side
+            self.max_x = side.loc_x + _square_side_width
+            self.min_y = side.loc_y - _square_side_width - _square_side
+            self.max_y = side.loc_y + _square_side_width
 
         elif side.direction == Direction.E:
             side_assign(side.loc_x - self.length, side.loc_y, Direction.O, _side_to_assign)
+            self.min_x = side.loc_x - self.length
+            self.max_x = side.loc_x
+            self.min_y = side.loc_y - (self.width / 2)
+            self.max_y = side.loc_y + (self.width / 2)             
 
         elif side.direction == Direction.SE:
             side_assign(side.loc_x - _square_side, side.loc_y + _square_side, Direction.NO, _side_to_assign)
+            self.min_x = side.loc_x - _square_side_width - _square_side
+            self.max_x = side.loc_x + _square_side_width
+            self.min_y = side.loc_y - _square_side_width
+            self.max_y = side.loc_y + _square_side_width + _square_side            
 
         elif side.direction == Direction.S:
             side_assign(side.loc_x, side.loc_y + self.length, Direction.N, _side_to_assign)
+            self.min_x = side.loc_x - (self.width / 2)
+            self.max_x = side.loc_x + (self.width / 2)
+            self.min_y = side.loc_y
+            self.max_y = side.loc_y + self.length          
 
         elif side.direction == Direction.SO:
             side_assign(side.loc_x + _square_side, side.loc_y + _square_side, Direction.NE, _side_to_assign)
+            self.min_x = side.loc_x - _square_side_width
+            self.max_x = side.loc_x + _square_side_width + _square_side
+            self.min_y = side.loc_y - _square_side_width
+            self.max_y = side.loc_y + _square_side_width + _square_side            
 
         elif side.direction == Direction.O:
             side_assign(side.loc_x + self.length, side.loc_y, Direction.E, _side_to_assign)
+            self.min_x = side.loc_x
+            self.max_x = side.loc_x + self.length
+            self.min_y = side.loc_y - (self.width / 2)
+            self.max_y = side.loc_y + (self.width / 2)               
 
         elif side.direction == Direction.NO:
             side_assign(side.loc_x + _square_side, side.loc_y - _square_side, Direction.SE, _side_to_assign)
+            self.min_x = side.loc_x - _square_side_width
+            self.max_x = side.loc_x + _square_side_width + _square_side
+            self.min_y = side.loc_y - _square_side_width - _square_side
+            self.max_y = side.loc_y + _square_side_width              
 
-
+    
 
 class CurvedType(Rail):
     """
@@ -184,14 +249,18 @@ class CurvedType(Rail):
 
 
     def _side_calc(self, side):
+        """
+        Calculate side location from the other.
+        """
 
         _next_index = (self.sides.index(side) + 1) % len(self.sides)
         _side_to_assign = self.sides[_next_index]
         _reverted = self.reverted
         _big = int(round(math.cos(math.radians(self.angle)) * self.radius))
         _little = self.radius - _big
-        LOGGER.debug(_big)
-        LOGGER.debug(_little)
+        _square_side_width = int(round(math.cos(math.radians(45)) * (self.width / 2)))
+        # LOGGER.debug(_big)
+        # LOGGER.debug(_little)
 
         # LOGGER.debug("Rail %s" % side.rail.name)
         # LOGGER.debug("Side %d defined to (%d,%d)/%s" % (side.rail.sides.index(side), side.loc_x, side.loc_y, side.direction))
@@ -202,51 +271,116 @@ class CurvedType(Rail):
         if _reverted:
             if side.direction == Direction.N:
                 side_assign(side.loc_x + _little, side.loc_y - _big, Direction.SE, _side_to_assign)
+                self.min_x = side.loc_x - (self.width / 2)
+                self.max_x = side.loc_x + _little + _square_side_width
+                self.min_y = side.loc_y - _big - _square_side_width
+                self.max_y = side.loc_y
 
             elif side.direction == Direction.NE:
                 side_assign(side.loc_x - _little, side.loc_y - _big, Direction.S, _side_to_assign)
+                self.min_x = side.loc_x  - _little - (self.width / 2)
+                self.max_x = side.loc_x + _square_side_width
+                self.min_y = side.loc_y - _big
+                self.max_y = side.loc_y + _square_side_width
 
             elif side.direction == Direction.E:
                 side_assign(side.loc_x - _big, side.loc_y - _little, Direction.SO, _side_to_assign)
+                self.min_x = side.loc_x - _big - _square_side_width
+                self.max_x = side.loc_x
+                self.min_y = side.loc_y - _little - _square_side_width
+                self.max_y = side.loc_y + (self.width / 2)
 
             elif side.direction == Direction.SE:
                 side_assign(side.loc_x - _big, side.loc_y + _little, Direction.O, _side_to_assign)
+                self.min_x = side.loc_x  - _big
+                self.max_x = side.loc_x + _square_side_width
+                self.min_y = side.loc_y - _square_side_width
+                self.max_y = side.loc_y + _little + (self.width / 2)
 
             elif side.direction == Direction.S:
                 side_assign(side.loc_x - _little, side.loc_y + _big, Direction.NO, _side_to_assign)
+                self.min_x = side.loc_x - _little - _square_side_width
+                self.max_x = side.loc_x + (self.width / 2)
+                self.min_y = side.loc_y
+                self.max_y = side.loc_y + _big + _square_side_width                
 
             elif side.direction == Direction.SO:
                 side_assign(side.loc_x + _little, side.loc_y + _big, Direction.N, _side_to_assign)
+                self.min_x = side.loc_x - _square_side_width
+                self.max_x = side.loc_x + _little + (self.width / 2)
+                self.min_y = side.loc_y - _square_side_width
+                self.max_y = side.loc_y + _big     
 
             elif side.direction == Direction.O:
                 side_assign(side.loc_x + _big, side.loc_y + _little, Direction.NE, _side_to_assign)
+                self.min_x = side.loc_x
+                self.max_x = side.loc_x + _big + _square_side_width
+                self.min_y = side.loc_y - (self.width / 2)
+                self.max_y = side.loc_y + _little + _square_side_width
 
             elif side.direction == Direction.NO:
                 side_assign(side.loc_x + _big, side.loc_y - _little, Direction.E, _side_to_assign)
+                self.min_x = side.loc_x - _square_side_width
+                self.max_x = side.loc_x + _big
+                self.min_y = side.loc_y - _little - (self.width / 2)
+                self.max_y = side.loc_y + _square_side_width
         else:
             if side.direction == Direction.N:
                 side_assign(side.loc_x - _little, side.loc_y - _big, Direction.SO, _side_to_assign)
+                self.min_x = side.loc_x - _little - _square_side_width
+                self.max_x = side.loc_x + (self.width / 2)
+                self.min_y = side.loc_y - _big - _square_side_width
+                self.max_y = side.loc_y
 
             elif side.direction == Direction.NE:
                 side_assign(side.loc_x - _big, side.loc_y - _little, Direction.O, _side_to_assign)
+                self.min_x = side.loc_x  - _big
+                self.max_x = side.loc_x + _square_side_width
+                self.min_y = side.loc_y - _little - (self.width / 2)
+                self.max_y = side.loc_y + _square_side_width
+                
 
             elif side.direction == Direction.E:
                 side_assign(side.loc_x - _big, side.loc_y + _little, Direction.NO, _side_to_assign)
+                self.min_x = side.loc_x - _big - _square_side_width
+                self.max_x = side.loc_x
+                self.min_y = side.loc_y - (self.width / 2)
+                self.max_y = side.loc_y + _little + _square_side_width
 
             elif side.direction == Direction.SE:
                 side_assign(side.loc_x - _little, side.loc_y + _big, Direction.N, _side_to_assign)
+                self.min_x = side.loc_x - _little - (self.width / 2)
+                self.max_x = side.loc_x + _square_side_width
+                self.min_y = side.loc_y - _square_side_width
+                self.max_y = side.loc_y + _big  
 
             elif side.direction == Direction.S:
                 side_assign(side.loc_x + _little, side.loc_y + _big, Direction.NE, _side_to_assign)
+                self.min_x = side.loc_x - (self.width / 2)
+                self.max_x = side.loc_x + _little + _square_side_width
+                self.min_y = side.loc_y
+                self.max_y = side.loc_y + _big + _square_side_width         
 
             elif side.direction == Direction.SO:
                 side_assign(side.loc_x + _big, side.loc_y + _little, Direction.E, _side_to_assign)
+                self.min_x = side.loc_x - _square_side_width
+                self.max_x = side.loc_x + _big
+                self.min_y = side.loc_y - _square_side_width
+                self.max_y = side.loc_y + _little + (self.width / 2)
 
             elif side.direction == Direction.O:
                 side_assign(side.loc_x + _big, side.loc_y - _little, Direction.SE, _side_to_assign)
+                self.min_x = side.loc_x
+                self.max_x = side.loc_x + _big + _square_side_width
+                self.min_y = side.loc_y - _little - _square_side_width
+                self.max_y = side.loc_y + (self.width / 2)
 
             elif side.direction == Direction.NO:
                 side_assign(side.loc_x + _little, side.loc_y - _big, Direction.S, _side_to_assign)
+                self.min_x = side.loc_x - _square_side_width
+                self.max_x = side.loc_x + _little + (self.width / 2)
+                self.min_y = side.loc_y - _big
+                self.max_y = side.loc_y + _square_side_width
 
 
 
@@ -276,15 +410,15 @@ class Side(object):
         """
         if self.rail != side.rail:
             if side.connector_type != self.connector_type:
-                if side.connected_to is None:
+                # if side.connected_to is None:
                     # LOGGER.debug("Connected side %d of rail %s to side %d of rail %s" % (self.rail.sides.index(self), self.rail.name, side.rail.sides.index(side), side.rail.name))
-                    self.connected_to = side
-                    side.connected_to = self
-                    side.loc_x = self.loc_x
-                    side.loc_y = self.loc_y
-                    side.direction = self.direction
-                else:
-                    raise AssertionError("Other side is already connected.")
+                self.connected_to = side
+                side.connected_to = self
+                side.loc_x = self.loc_x
+                side.loc_y = self.loc_y
+                side.direction = self.direction
+                # else:
+                    # raise AssertionError("Other side is already connected.")
             else:
                 raise AssertionError("Connector of same type cannot be connected.")
         else:

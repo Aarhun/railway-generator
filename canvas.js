@@ -1,7 +1,7 @@
 
 window.onload = windowReady;
 
-function drawCurved(context, x1, y1, x2, y2, direction1, direction2, radius, lineWidth, scale, color)
+function drawCurved(context, x1, y1, x2, y2, direction1, direction2, radius, width, scale, color)
 {
     var centerX;
     var centerY;
@@ -180,7 +180,7 @@ function drawCurved(context, x1, y1, x2, y2, direction1, direction2, radius, lin
 
 
 
-    context.lineWidth = lineWidth;
+    context.lineWidth = width;
     context.strokeStyle = color;
 
     context.stroke();
@@ -286,7 +286,19 @@ function drawCanvasOutline(context, scale)
     context.closePath();
 }
 
-
+function drawRailBox(context, min_x, max_x, min_y, max_y)
+{
+    context.beginPath();
+    context.moveTo(min_x, -min_y);
+    context.lineTo(min_x, -max_y);
+    context.lineTo(max_x, -max_y);
+    context.lineTo(max_x, -min_y);
+    context.lineTo(min_x, -min_y);
+    context.lineWidth = 4;
+    context.strokeStyle = 'black';
+    context.stroke();
+    context.closePath();
+}
 
 
 
@@ -303,9 +315,11 @@ function windowReady()
 
     var scale = 0.5;
 
-    var lineWidth = 60 * scale;
-    var shift_x = 60 * scale + lineWidth * 2;
-    var shift_y = 60 * scale + lineWidth * 2;
+    // var lineWidth = 60 * scale;
+    // var shift_x = 60 * scale + lineWidth * 2;
+    // var shift_y = 60 * scale + lineWidth * 2;
+    var shift_x = 60 * scale;
+    var shift_y = 60 * scale;    
     var context = document.getElementById("canvasId").getContext("2d");
     var width = (max_x - min_x + shift_x * 2);
     var height = (max_y - min_y + shift_y * 2);
@@ -378,6 +392,8 @@ function windowReady()
         reverted = railway["rails"][rail]["reverted"];
         radius = railway["rails"][rail]["radius"];
         color = railway["rails"][rail]["color"];
+        width = railway["rails"][rail]["width"];
+        
         // console.log(curved);
         // console.log(reverted);
         for (side in railway["rails"][rail]["sides"])
@@ -398,7 +414,7 @@ function windowReady()
                     second_point_x = railway["rails"][rail]["sides"][side]["x"];
                     second_point_y = railway["rails"][rail]["sides"][side]["y"];
 
-                    drawCurved(context, first_point_x, first_point_y, second_point_x, second_point_y, first_point_direction, second_point_direction, radius, lineWidth, scale, color)
+                    drawCurved(context, first_point_x, first_point_y, second_point_x, second_point_y, first_point_direction, second_point_direction, radius, width, scale, color)
                 }
             }
             else
@@ -418,7 +434,7 @@ function windowReady()
                     context.beginPath();
                     context.moveTo(first_point_x,-first_point_y);
                     context.lineTo(second_point_x, -second_point_y);
-                    context.lineWidth = lineWidth;
+                    context.lineWidth = width;
                     context.strokeStyle = color;
                     context.stroke();
                     context.closePath();
@@ -438,8 +454,13 @@ function windowReady()
             first_point_direction = railway["rails"][rail]["sides"][side]["direction"];
             first_point_x = railway["rails"][rail]["sides"][side]["x"];
             first_point_y = railway["rails"][rail]["sides"][side]["y"];
-            drawSide(context, first_point_x, first_point_y, first_point_direction, lineWidth);
+            drawSide(context, first_point_x, first_point_y, first_point_direction, width);
         }
+        min_x = railway["rails"][rail]["min_x"];
+        max_x = railway["rails"][rail]["max_x"];
+        min_y = railway["rails"][rail]["min_y"];
+        max_y = railway["rails"][rail]["max_y"];
+        drawRailBox(context, min_x, max_x, min_y, max_y)
 
     }
 
