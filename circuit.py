@@ -31,8 +31,9 @@ class SearchCircuit(object):
             random.shuffle(_not_used_rails)
             # _next_rail = _not_used_rails[random.randrange(0, len(_not_used_rails))]
             for _next_rail in _not_used_rails:
+                _next_rail = rail.LocalizedRail(_next_rail)   
                 LOGGER.debug("Following %s" % _next_rail.name)
-                _test_circuit[-1].sides[1].connect(_next_rail.sides[0])
+                _test_circuit[-1].localized_sides[1].connect(_next_rail.localized_sides[0])
                 _test_circuit.append(_next_rail)
 
                 if _test_circuit in self.not_valid_circuit:
@@ -93,7 +94,8 @@ class SearchCircuit(object):
             LOGGER.debug("END without found one :(")
             for elt in self.not_valid_circuit:
                 LOGGER.debug(str(elt))
-    
+                
+                
 class Circuit(object):
     """
     Define a circuit.
@@ -105,8 +107,11 @@ class Circuit(object):
         It just need to specify the first rail, as the rail's sides have memory of which rail is connected to.
         To construct the circuit we just need to follow the chain.
         """
-        self.first_rail = first_rail
         self.rails = []
+        self.first_rail = first_rail
+        self.first_rail.localized_sides[0].loc_x = 0
+        self.first_rail.localized_sides[0].loc_y = 0
+        self.first_rail.localized_sides[0].direction = rail.Direction.S
         self.complete = True
         self.valid = True
         self.length = 0
@@ -116,16 +121,14 @@ class Circuit(object):
         self.min_y = None
         self.sides_not_connected = []
         self.rails_number = 0
-        self.first_rail.sides[0].loc_x = 0
-        self.first_rail.sides[0].loc_y = 0
-        self.first_rail.sides[0].direction = rail.Direction.S
+
         self.json_repr = {}
         self.json_repr.setdefault("rails", {})
         self._walk_circuit(self.first_rail,
                            funcs=[self._init_length, self._init_sides, self._is_overlapping, self._init_json, self._init_min_max])
 
         self._try_to_complete_circuit()
-        self._convertLocation()
+        self._convert_location()
 
         self.json_repr.setdefault("max_x", self.max_x)
         self.json_repr.setdefault("max_y", self.max_y)
@@ -167,7 +170,7 @@ class Circuit(object):
                 LOGGER.error("Circuit is not valid.")
                 
 
-    def _convertLocation(self):
+    def _convert_location(self):
         """
         We need positive location to draw canvas easily.
         """
@@ -216,22 +219,22 @@ class Circuit(object):
 
         self.json_repr["rails"].setdefault(_rail.name, {})
         self.json_repr["rails"][_rail.name].setdefault("sides", {})
-        self.json_repr["rails"][_rail.name].setdefault("curved", _rail.curved)
-        self.json_repr["rails"][_rail.name].setdefault("reverted", _rail.reverted)
-        self.json_repr["rails"][_rail.name].setdefault("color", _rail.color)
-        self.json_repr["rails"][_rail.name].setdefault("width", _rail.width)
+        self.json_repr["rails"][_rail.name].setdefault("curved", _rail.rail.curved)
+        self.json_repr["rails"][_rail.name].setdefault("reverted", _rail.rail.reverted)
+        self.json_repr["rails"][_rail.name].setdefault("color", _rail.rail.color)
+        self.json_repr["rails"][_rail.name].setdefault("width", _rail.rail.width)
         self.json_repr["rails"][_rail.name].setdefault("min_x", _rail.min_x)
         self.json_repr["rails"][_rail.name].setdefault("min_y", _rail.min_y)
         self.json_repr["rails"][_rail.name].setdefault("max_x", _rail.max_x)
         self.json_repr["rails"][_rail.name].setdefault("max_y", _rail.max_y)
-        if _rail.curved:
-            self.json_repr["rails"][_rail.name].setdefault("radius", _rail.radius)
+        if _rail.rail.curved:
+            self.json_repr["rails"][_rail.name].setdefault("radius", _rail.rail.radius)
             
-        for side in _rail.sides:
-            self.json_repr["rails"][_rail.name]["sides"].setdefault(_rail.sides.index(side), {})
-            self.json_repr["rails"][_rail.name]["sides"][_rail.sides.index(side)].setdefault("x", side.loc_x)
-            self.json_repr["rails"][_rail.name]["sides"][_rail.sides.index(side)].setdefault("y", side.loc_y)
-            self.json_repr["rails"][_rail.name]["sides"][_rail.sides.index(side)].setdefault("direction", side.direction)
+        for side in _rail.localized_sides:
+            self.json_repr["rails"][_rail.name]["sides"].setdefault(_rail.localized_sides.index(side), {})
+            self.json_repr["rails"][_rail.name]["sides"][_rail.localized_sides.index(side)].setdefault("x", side.loc_x)
+            self.json_repr["rails"][_rail.name]["sides"][_rail.localized_sides.index(side)].setdefault("y", side.loc_y)
+            self.json_repr["rails"][_rail.name]["sides"][_rail.localized_sides.index(side)].setdefault("direction", side.direction)
                 
 
 
@@ -283,7 +286,7 @@ class Circuit(object):
         Calculate the length of the circuit by additionnate all length of rail part found.
         Can be not accurate in case of multiples loops.
         """
-        self.length = self.length + _rail.length
+        self.length = self.length + _rail.rail.length
 
 
 
@@ -296,7 +299,7 @@ class Circuit(object):
 
         # LOGGER.info("Walk through rail %s" % _rail.name)
 
-        if _rail.name in [elt.name for elt in self.rails]:
+        if _rail.name in [elt.rail.name for elt in self.rails]:
             _rail.name = "%s%s" % (_rail.name, str(random.randrange(0, 10000)))
         
         if funcs:
@@ -313,12 +316,12 @@ class Circuit(object):
         
             
 
-        for side in _rail.sides:
+        for side in _rail.localized_sides:
             if not side.is_connected():
                 self.complete = False
                 self.sides_not_connected.append(side)
             else:
-                self._walk_circuit(side.connected_to.rail, funcs)
+                self._walk_circuit(side.connected_to.localized_rail, funcs)
         
         
 
